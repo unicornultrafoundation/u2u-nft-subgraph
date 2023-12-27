@@ -7,7 +7,7 @@ dataSources:
     network: mainnet
     source:
       abi: EIP721AndEIP1155
-      startBlock: 5500000
+      startBlock: 467960
     mapping:
       kind: ethereum/events
       apiVersion: 0.0.6
@@ -18,13 +18,6 @@ dataSources:
         - URI
         - Transfer
         - Transfer1
-        - Transfer2
-        - Transfer3
-        - Transfer4
-        - Transfer5
-        - Transfer6
-        - Transfer7
-        - Transfer8
         - TransferSingle
         - TransferBatch
       abis:
