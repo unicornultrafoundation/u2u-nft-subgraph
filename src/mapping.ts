@@ -3,7 +3,6 @@ import {
   EIP721AndEIP1155,
   URI,
   Transfer,
-  Transfer1,
   TransferSingle,
   TransferBatch
 } from "../generated/EIP721AndEIP1155/EIP721AndEIP1155"
@@ -16,7 +15,7 @@ export function handleURI(event: URI): void {
 }
 
 export function handleTransfer(event: Transfer): void {
-  let tokenId = event.params.id;
+  let tokenId = event.params.tokenId;
   let id = event.address.toHex() + '_' + tokenId.toString();
   let contractId = event.address.toHex();
 
@@ -77,69 +76,6 @@ export function handleTransfer(event: Transfer): void {
   handleLookupQuantity(contract,event.params.from,event.params.to,token,BigInt.fromI32(1))
 
   
-}
-
-export function handleTransfer1(event: Transfer1): void {
-  let tokenId = event.params._tokenId;
-  let id = event.address.toHex() + '_' + tokenId.toString();
-  let contractId = event.address.toHex();
-
-  let contract = EIP721AndEIP1155.bind(event.address);
-  let tokenContract = TokenContract.load(contractId);
-  if(tokenContract == null) {
-    tokenContract = new TokenContract(contractId)
-    tokenContract.isLikelyERC1155 = false
-    let name = contract.try_name();
-    if(!name.reverted) {
-        tokenContract.name = normalize(name.value);
-    }
-    let symbol = contract.try_symbol();
-    if(!symbol.reverted) {
-        tokenContract.symbol = normalize(symbol.value);
-    }
-    tokenContract.save()
-  }
-
-  let token = Token.load(id)
-  if(token == null){
-    token = new Token(id)
-    token.contract = tokenContract.id;
-    token.tokenID = tokenId;
-    token.mintTime = event.block.timestamp;
-    let metadataURI = contract.try_tokenURI(tokenId);
-    if(!metadataURI.reverted) {
-      token.tokenURI = normalize(metadataURI.value);
-    } else {
-      let metadataURI = contract.try_uri(tokenId);
-      if(!metadataURI.reverted) {
-        token.tokenURI = normalize(metadataURI.value);
-      } else {
-        token.tokenURI = "";
-      }
-    }
-    token.save()
-  }
-
-  if(event.params._from!=Address.zero()){
-    log.warning("zero address",[])
-
-  let from = Owner.load(event.params._from.toHex())
-  if(from==null){
-    from = new Owner(event.params._from.toHex())
-    from.save()
-    }
-
-  }
-
-  if(event.params._to!=Address.zero()){
-    let to = Owner.load(event.params._to.toHex())
-    if(to==null){
-      to = new Owner(event.params._to.toHex())
-      to.save()
-    }
-  }
-  handleLookupQuantity(contract,event.params._from,event.params._to,token,BigInt.fromI32(1))
-
 }
 
 export function handleTransferSingle(event: TransferSingle): void {

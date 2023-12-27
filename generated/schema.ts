@@ -351,17 +351,21 @@ export class Owner extends Entity {
     );
   }
 
-  get numTokens(): BigInt {
+  get numTokens(): BigInt | null {
     let value = this.get("numTokens");
     if (!value || value.kind == ValueKind.NULL) {
-      throw new Error("Cannot return null for a required field.");
+      return null;
     } else {
       return value.toBigInt();
     }
   }
 
-  set numTokens(value: BigInt) {
-    this.set("numTokens", Value.fromBigInt(value));
+  set numTokens(value: BigInt | null) {
+    if (!value) {
+      this.unset("numTokens");
+    } else {
+      this.set("numTokens", Value.fromBigInt(<BigInt>value));
+    }
   }
 }
 
