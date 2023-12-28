@@ -73,9 +73,9 @@ export function handleTransfer(event: Transfer): void {
       to.save()
     }
   }
-  handleLookupQuantity(contract,event.params.from,event.params.to,token,BigInt.fromI32(1))
-
   
+  handleLookupERC721(contract,event.params.from,event.params.to,token)
+
 }
 
 export function handleTransferSingle(event: TransferSingle): void {
@@ -210,7 +210,54 @@ export function handleTransferBatch(event: TransferBatch): void {
 
 }
 
+function handleLookupERC721(contract:EIP721AndEIP1155,from:Address,to:Address,token:Token):void{
 
+  let wasMinted: boolean = from.toHex() == "0x0000000000000000000000000000000000000000";
+
+  let isBurned: boolean = to.toHex() == "0x0000000000000000000000000000000000000000";
+
+  // If it was minted, the FROM address is the Zero address, therefore we don't create a lookup for it. (it won't work)
+  if (wasMinted == false) {
+    // I denote look-ups with the id `UserAddress:ContractAddress_tokenId`
+    let fromLookupId = from.toHex() + ":" + token.id;
+
+    let fromLookup = OwnerTokenLookup.load(fromLookupId);
+    if (fromLookup == null) {
+      // Lookup doesn't exist so we create a new one.
+      fromLookup = new OwnerTokenLookup(fromLookupId);
+      fromLookup.owner = from.toHex();
+      fromLookup.contract = token.contract;
+      fromLookup.token = token.id;
+      fromLookup.quantity = BigInt.fromI32(0);
+      fromLookup.save();
+    } else {
+      fromLookup.quantity = BigInt.fromI32(0);
+      fromLookup.save();
+    }
+
+    log.debug("Getting balance of from: {}", [from.toHex()]);
+
+  }
+
+  // If it was burned, the TO address is the Zero address, therefore we dont'  create a lookup for it. (it won't work)
+  if (isBurned == false) {
+    // I denote look-ups with the id `UserAddress:contractAddress_tokenId`
+    let toLookupId = to.toHex() + ":" + token.id;
+    // to lookup handler
+    let toLookup = OwnerTokenLookup.load(toLookupId);
+    if (toLookup == null) {
+      toLookup = new OwnerTokenLookup(toLookupId);
+      toLookup.owner = to.toHex();
+      toLookup.contract = token.contract;
+      toLookup.token = token.id;
+      toLookup.quantity = BigInt.fromI32(1);
+      toLookup.save();
+    } else {
+      toLookup.quantity = BigInt.fromI32(1);
+      toLookup.save();
+    }
+  }
+}
 
 function handleLookupQuantity(contract:EIP721AndEIP1155,from:Address,to:Address,token:Token,quantity:BigInt=BigInt.fromI32('1')):void{
 
