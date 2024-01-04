@@ -28,4 +28,12 @@ type Owner @entity {
   id: ID!
   tokens: [OwnerTokenLookup!]! @derivedFrom(field: "owner")
   numTokens: BigInt
+  balance: [OwnerTokenAmount!]! @derivedFrom(field: "owner")
+}
+
+type OwnerTokenAmount @entity {
+  id: ID! #User:Address
+  amount: BigInt!
+  contract: TokenContract!
+  owner: Owner!
 }
