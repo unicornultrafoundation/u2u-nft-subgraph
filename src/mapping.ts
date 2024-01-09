@@ -372,31 +372,26 @@ function handleLookupQuantity(contract:EIP721AndEIP1155,from:Address,to:Address,
       toLookup.save();
     }
 
-    // This collectible was minted and sent to this user, therefore we know the user now owns the full value.
-    if (wasMinted) {
-      toLookup.quantity = quantity;
-    } else {
-      // Else, we hit the contract of this collectible's collection to know how much TO owns.
-      let balTo = contract.try_balanceOf(to, token.tokenID);
+    // This collectible was minted and sent to this user, therefore we know the user now owns the full value.   
+    let balTo = contract.try_balanceOf(to, token.tokenID);
+    if(balTo.reverted){
+      balTo = contract.try_balanceOf1(to);
       if(balTo.reverted){
-        balTo = contract.try_balanceOf1(to);
-        if(balTo.reverted){
-          balTo = contract.try_balanceOf2(to);
-        }
+        balTo = contract.try_balanceOf2(to);
       }
-      if (!balTo.reverted) {
-        // If replied nicely, we set the quantity that user owns for this collectible.
-        toLookup.quantity = balTo.value;
-      } else {
-        // if contract badly responded, we attempt to do simple math and add the quantity received.
-        let amount = toLookup.quantity.plus(quantity);
-        toLookup.quantity = amount;
-      }
-      //Check the quantity is valid:
-      // if (toLookup.quantity == null) {
-      //   toLookup.quantity = new BigInt(1);
-      // }
     }
+    if (!balTo.reverted) {
+      // If replied nicely, we set the quantity that user owns for this collectible.
+      toLookup.quantity = balTo.value;
+    } else {
+      // if contract badly responded, we attempt to do simple math and add the quantity received.
+      let amount = toLookup.quantity.plus(quantity);
+      toLookup.quantity = amount;
+    }
+    //Check the quantity is valid:
+    // if (toLookup.quantity == null) {
+    //   toLookup.quantity = new BigInt(1);
+    // }
 
     toLookup.save();
   }
