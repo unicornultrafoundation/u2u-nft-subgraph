@@ -11,7 +11,12 @@ import { normalize } from "./helpers";
 const zeroAddress = "0x0000000000000000000000000000000000000000"
 
 export function handleURI(event: URI): void {
-
+  let id = event.address.toHex() + '_' + event.params.id.toString();
+  let token = Token.load(id)
+  if(token != null) {
+    token.tokenURI = event.params.value;
+    token.save()
+  }
 }
 
 export function handleTransfer(event: Transfer): void {
