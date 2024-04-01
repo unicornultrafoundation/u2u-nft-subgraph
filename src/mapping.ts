@@ -6,12 +6,17 @@ import {
   TransferSingle,
   TransferBatch
 } from "../generated/EIP721AndEIP1155/EIP721AndEIP1155"
-import {Owner, OwnerTokenLookup, Token, TokenContract} from "../generated/schema"
+import {Owner, OwnerTokenAmount, OwnerTokenLookup, Token, TokenContract} from "../generated/schema"
 import { normalize } from "./helpers";
 const zeroAddress = "0x0000000000000000000000000000000000000000"
 
 export function handleURI(event: URI): void {
-
+  let id = event.address.toHex() + '_' + event.params.id.toString();
+  let token = Token.load(id)
+  if(token != null) {
+    token.tokenURI = event.params.value;
+    token.save()
+  }
 }
 
 export function handleTransfer(event: Transfer): void {
@@ -73,7 +78,7 @@ export function handleTransfer(event: Transfer): void {
       to.save()
     }
   }
-  
+
   handleLookupERC721(contract,event.params.from,event.params.to,token)
 
 }
@@ -87,7 +92,7 @@ export function handleTransferSingle(event: TransferSingle): void {
   let tokenContract = TokenContract.load(contractId);
   if(tokenContract == null) {
     tokenContract = new TokenContract(contractId)
-    tokenContract.isLikelyERC1155 = false
+    tokenContract.isLikelyERC1155 = true
     let name = contract.try_name();
     if(!name.reverted) {
         tokenContract.name = normalize(name.value);
@@ -153,7 +158,7 @@ export function handleTransferBatch(event: TransferBatch): void {
   let tokenContract = TokenContract.load(contractId);
   if(tokenContract == null) {
     tokenContract = new TokenContract(contractId)
-    tokenContract.isLikelyERC1155 = false
+    tokenContract.isLikelyERC1155 = true
     let name = contract.try_name();
     if(!name.reverted) {
         tokenContract.name = normalize(name.value);
@@ -221,6 +226,22 @@ function handleLookupERC721(contract:EIP721AndEIP1155,from:Address,to:Address,to
     // I denote look-ups with the id `UserAddress:ContractAddress_tokenId`
     let fromLookupId = from.toHex() + ":" + token.id;
 
+    let ownerTokenAmount = OwnerTokenAmount.load(from.toHex() + ":" + token.contract)
+    if (ownerTokenAmount == null) {
+      ownerTokenAmount = new OwnerTokenAmount(from.toHex() + ":" + token.contract);
+      ownerTokenAmount.owner = from.toHex();
+      ownerTokenAmount.contract = token.contract;
+      ownerTokenAmount.amount = new BigInt(0);
+      ownerTokenAmount.save();
+    }
+    let tokenAmount = new BigInt(0);
+    
+    if (ownerTokenAmount.amount.toI64() > 0) {
+      tokenAmount = BigInt.fromI64(ownerTokenAmount.amount.toI64() - 1);
+      ownerTokenAmount.amount = tokenAmount;
+      ownerTokenAmount.save();
+    }
+
     let fromLookup = OwnerTokenLookup.load(fromLookupId);
     if (fromLookup == null) {
       // Lookup doesn't exist so we create a new one.
@@ -228,10 +249,10 @@ function handleLookupERC721(contract:EIP721AndEIP1155,from:Address,to:Address,to
       fromLookup.owner = from.toHex();
       fromLookup.contract = token.contract;
       fromLookup.token = token.id;
-      fromLookup.quantity = BigInt.fromI32(0);
+      fromLookup.quantity = BigInt.fromI64(0);
       fromLookup.save();
     } else {
-      fromLookup.quantity = BigInt.fromI32(0);
+      fromLookup.quantity = BigInt.fromI64(0);
       fromLookup.save();
     }
 
@@ -243,6 +264,18 @@ function handleLookupERC721(contract:EIP721AndEIP1155,from:Address,to:Address,to
   if (isBurned == false) {
     // I denote look-ups with the id `UserAddress:contractAddress_tokenId`
     let toLookupId = to.toHex() + ":" + token.id;
+    let ownerTokenAmount = OwnerTokenAmount.load(to.toHex() + ":" + token.contract)
+    if (ownerTokenAmount == null) {
+      ownerTokenAmount = new OwnerTokenAmount(to.toHex() + ":" + token.contract);
+      ownerTokenAmount.owner = to.toHex();
+      ownerTokenAmount.contract = token.contract;
+      ownerTokenAmount.amount = new BigInt(0);
+      ownerTokenAmount.save();
+    }
+    let tokenAmount = new BigInt(0);
+    tokenAmount = BigInt.fromI64(ownerTokenAmount.amount.toI64() + 1);
+    ownerTokenAmount.amount = tokenAmount;
+    ownerTokenAmount.save();
     // to lookup handler
     let toLookup = OwnerTokenLookup.load(toLookupId);
     if (toLookup == null) {
@@ -250,16 +283,16 @@ function handleLookupERC721(contract:EIP721AndEIP1155,from:Address,to:Address,to
       toLookup.owner = to.toHex();
       toLookup.contract = token.contract;
       toLookup.token = token.id;
-      toLookup.quantity = BigInt.fromI32(1);
+      toLookup.quantity = BigInt.fromI64(1);
       toLookup.save();
     } else {
-      toLookup.quantity = BigInt.fromI32(1);
+      toLookup.quantity = BigInt.fromI64(1);
       toLookup.save();
     }
   }
 }
 
-function handleLookupQuantity(contract:EIP721AndEIP1155,from:Address,to:Address,token:Token,quantity:BigInt=BigInt.fromI32('1')):void{
+function handleLookupQuantity(contract:EIP721AndEIP1155,from:Address,to:Address,token:Token,quantity:BigInt):void{
 
   let wasMinted: boolean = from.toHex() == "0x0000000000000000000000000000000000000000";
 
@@ -269,7 +302,19 @@ function handleLookupQuantity(contract:EIP721AndEIP1155,from:Address,to:Address,
   if (wasMinted == false) {
     // I denote look-ups with the id `UserAddress:ContractAddress_tokenId`
     let fromLookupId = from.toHex() + ":" + token.id;
-
+    let ownerTokenAmount = OwnerTokenAmount.load(from.toHex() + ":" + token.contract)
+    if (ownerTokenAmount == null) {
+      ownerTokenAmount = new OwnerTokenAmount(from.toHex()  + ":" + token.contract);
+      ownerTokenAmount.owner = from.toHex();
+      ownerTokenAmount.contract = token.contract;
+      ownerTokenAmount.amount = BigInt.fromI32(0);
+      ownerTokenAmount.save();
+    }
+    if (ownerTokenAmount.amount.ge(quantity)) {
+      ownerTokenAmount.amount = ownerTokenAmount.amount.minus(quantity);
+      ownerTokenAmount.save();
+    }
+    
     let fromLookup = OwnerTokenLookup.load(fromLookupId);
     if (fromLookup == null) {
       // Lookup doesn't exist so we create a new one.
@@ -277,7 +322,7 @@ function handleLookupQuantity(contract:EIP721AndEIP1155,from:Address,to:Address,
       fromLookup.owner = from.toHex();
       fromLookup.contract = token.contract;
       fromLookup.token = token.id;
-      fromLookup.quantity = new BigInt(0);
+      fromLookup.quantity = BigInt.fromI32(0);
       fromLookup.save();
     }
 
@@ -297,11 +342,11 @@ function handleLookupQuantity(contract:EIP721AndEIP1155,from:Address,to:Address,
       fromLookup.quantity = balFrom.value;
     } else if (fromLookup.quantity >= quantity) {
       // if contract badly responded, we attempt to do simple math and remove the quantity sent.
-      let amount = fromLookup.quantity.toI32() - quantity.toI32();
-      fromLookup.quantity = new BigInt(amount);
+      let amount = fromLookup.quantity.minus(quantity);
+      fromLookup.quantity = amount;
     } else {
       // Else if the value sent is greater than previous quantity, we set it to 0.
-      fromLookup.quantity = new BigInt(0);
+      fromLookup.quantity = BigInt.fromI32(0);
     }
     fromLookup.save();
   }
@@ -310,6 +355,17 @@ function handleLookupQuantity(contract:EIP721AndEIP1155,from:Address,to:Address,
   if (isBurned == false) {
     // I denote look-ups with the id `UserAddress:contractAddress_tokenId`
     let toLookupId = to.toHex() + ":" + token.id;
+    let ownerTokenAmount = OwnerTokenAmount.load(to.toHex() + ":" + token.contract)
+    if (ownerTokenAmount == null) {
+      ownerTokenAmount = new OwnerTokenAmount(to.toHex() + ":" + token.contract);
+      ownerTokenAmount.owner = to.toHex();
+      ownerTokenAmount.contract = token.contract;
+      ownerTokenAmount.amount = BigInt.fromI32(0);
+      ownerTokenAmount.save();
+    }
+      let tokenAmount = ownerTokenAmount.amount.plus(quantity);
+      ownerTokenAmount.amount = tokenAmount;
+      ownerTokenAmount.save();
     // to lookup handler
     let toLookup = OwnerTokenLookup.load(toLookupId);
     if (toLookup == null) {
@@ -317,35 +373,30 @@ function handleLookupQuantity(contract:EIP721AndEIP1155,from:Address,to:Address,
       toLookup.owner = to.toHex();
       toLookup.contract = token.contract;
       toLookup.token = token.id;
-      toLookup.quantity = new BigInt(0);
+      toLookup.quantity = BigInt.fromI32(0);
       toLookup.save();
     }
 
-    // This collectible was minted and sent to this user, therefore we know the user now owns the full value.
-    if (wasMinted) {
-      toLookup.quantity = quantity;
-    } else {
-      // Else, we hit the contract of this collectible's collection to know how much TO owns.
-      let balTo = contract.try_balanceOf(to, token.tokenID);
+    // This collectible was minted and sent to this user, therefore we know the user now owns the full value.   
+    let balTo = contract.try_balanceOf(to, token.tokenID);
+    if(balTo.reverted){
+      balTo = contract.try_balanceOf1(to);
       if(balTo.reverted){
-        balTo = contract.try_balanceOf1(to);
-        if(balTo.reverted){
-          balTo = contract.try_balanceOf2(to);
-        }
+        balTo = contract.try_balanceOf2(to);
       }
-      if (!balTo.reverted) {
-        // If replied nicely, we set the quantity that user owns for this collectible.
-        toLookup.quantity = balTo.value;
-      } else {
-        // if contract badly responded, we attempt to do simple math and add the quantity received.
-        let amount = toLookup.quantity.toI32() + quantity.toI32();
-        toLookup.quantity = new BigInt(amount);
-      }
-      //Check the quantity is valid:
-      // if (toLookup.quantity == null) {
-      //   toLookup.quantity = new BigInt(1);
-      // }
     }
+    if (!balTo.reverted) {
+      // If replied nicely, we set the quantity that user owns for this collectible.
+      toLookup.quantity = balTo.value;
+    } else {
+      // if contract badly responded, we attempt to do simple math and add the quantity received.
+      let amount = toLookup.quantity.plus(quantity);
+      toLookup.quantity = amount;
+    }
+    //Check the quantity is valid:
+    // if (toLookup.quantity == null) {
+    //   toLookup.quantity = new BigInt(1);
+    // }
 
     toLookup.save();
   }
