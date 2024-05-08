@@ -4,10 +4,10 @@
   "scripts": {
     "codegen": "graph codegen",
     "build": "graph build",
-    "deploy": "graph deploy --node https://api.thegraph.com/deploy/ u2u/nft-nebulas",
-    "create-local": "graph create --node http://localhost:8021/ u2u/nft-nebulas",
-    "remove-local": "graph remove --node http://localhost:8021/ u2u/nft-nebulas",
-    "deploy-local": "graph deploy --node http://localhost:8021/ --ipfs http://localhost:5002 u2u/nft-nebulas -l v0.0.1",
+    "deploy": "graph deploy --node https://api.thegraph.com/deploy/ u2u/nft-nebulas-v2",
+    "create-local": "graph create --node http://localhost:8021/ u2u/nft-nebulas-v2",
+    "remove-local": "graph remove --node http://localhost:8021/ u2u/nft-nebulas-v2",
+    "deploy-local": "graph deploy --node http://localhost:8021/ --ipfs http://localhost:5002 u2u/nft-nebulas-v2 -l v0.0.1",
     "deploy-all": "npm run codegen && npm run build && npm run remove-local && npm run create-local && npm run deploy-local"
   },
   "dependencies": {
