@@ -4,10 +4,10 @@
   "scripts": {
     "codegen": "graph codegen",
     "build": "graph build",
-    "deploy": "graph deploy --node https://api.thegraph.com/deploy/ u2u/nft",
-    "create-local": "graph create --node http://localhost:8020/ u2u/nft",
-    "remove-local": "graph remove --node http://localhost:8020/ u2u/nft",
-    "deploy-local": "graph deploy --node http://localhost:8020/ --ipfs http://localhost:5001 u2u/nft -l v0.0.1",
+    "deploy": "graph deploy --node https://api.thegraph.com/deploy/ u2u/nft-test",
+    "create-local": "graph create --node http://localhost:8020/ u2u/nft-test",
+    "remove-local": "graph remove --node http://localhost:8020/ u2u/nft-test",
+    "deploy-local": "graph deploy --node http://localhost:8020/ --ipfs http://localhost:5001 u2u/nft-test -l v0.0.1",
     "deploy-all": "npm run codegen && npm run build && npm run remove-local && npm run create-local && npm run deploy-local"
   },
   "dependencies": {
